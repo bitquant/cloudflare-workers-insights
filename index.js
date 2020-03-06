@@ -22,20 +22,21 @@ async function handleRequest(params) {
     context.fetch = async (request, params) => {
 
         let fetchStart = Date.now();
+        let fetchRequest = new Request(request, params);
         let fetchError = null;
-        let url = (typeof request === 'string') ? request : request.url;
-        let method = (params !== undefined && params.method !== undefined) ?
-            params.method : 'GET';
 
         let logEntry = {
             service: serviceName,
             correlationId: correlationId,
-            url: url,
-            method: method
+            url: fetchRequest.url,
+            method: fetchRequest.method
         }
 
         try {
-            var response = await fetch(request, params);
+            if (fetchRequest.headers.has('x-correlation-id') === false) {
+                fetchRequest.headers.set('x-correlation-id', correlationId);
+            }
+            var response = await fetch(fetchRequest);
             logEntry.status = response.status;
         }
         catch(err) {
