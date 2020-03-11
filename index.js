@@ -7,7 +7,8 @@ async function handleRequest(params) {
     let startTime = Date.now();
     let request = event.request;
     let correlationId = getCorrelationId(request);
-    let context = { correlationId: correlationId };
+    let requester = getRequester(request);
+    let context = { correlationId: correlationId, requester: requester };
     let waitUntil = (p) => event.waitUntil(p);
 
     context.log = (data) => {
@@ -35,6 +36,9 @@ async function handleRequest(params) {
         try {
             if (fetchRequest.headers.has('x-correlation-id') === false) {
                 fetchRequest.headers.set('x-correlation-id', correlationId);
+            }
+            if (fetchRequest.headers.has('x-requester') === false) {
+                fetchRequest.headers.set('x-requester', serviceName);
             }
             var response = await fetch(fetchRequest);
             logEntry.status = response.status;
@@ -67,6 +71,7 @@ async function handleRequest(params) {
         status: response.status,
         duration: duration,
         correlationId: correlationId,
+        requester: requester,
         country: request.cf.country,
         colo: request.cf.colo
     }
@@ -84,6 +89,16 @@ function getCorrelationId(request) {
     }
 
     return correlationId;
+}
+
+function getRequester(request) {
+
+    let requester = request.headers.get('x-requester');
+    if (requester === null) {
+        requester = 'unknown'
+    }
+
+    return requester;
 }
 
 module.exports = handleRequest;
