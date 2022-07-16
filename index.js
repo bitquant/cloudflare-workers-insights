@@ -22,10 +22,10 @@ async function handleRequest(params) {
         return logger({ log: logEntry }, waitUntil);
     };
 
-    context.fetch = async (request, params) => {
+    context.fetch = async (request, options) => {
 
         let fetchStart = Date.now();
-        let fetchRequest = new Request(request, params);
+        let fetchRequest = new Request(request, options);
         let fetchError = null;
 
         let logEntry = {
@@ -33,7 +33,7 @@ async function handleRequest(params) {
             correlationId: correlationId,
             url: fetchRequest.url,
             method: fetchRequest.method
-        }
+        };
 
         try {
             if (fetchRequest.headers.has('x-correlation-id') === false) {
@@ -42,12 +42,12 @@ async function handleRequest(params) {
             if (fetchRequest.headers.has('x-caller') === false) {
                 fetchRequest.headers.set('x-caller', serviceName);
             }
-            var response = await fetch(fetchRequest);
+            var response = await (options?.service ? globalThis[options?.service].fetch(fetchRequest) : fetch(fetchRequest));
             logEntry.status = response.status;
         }
         catch(err) {
             logEntry.status = 999;
-            logEntry.err = `${err}`
+            logEntry.err = `${err}`;
             fetchError = err;
         }
 
@@ -74,13 +74,13 @@ async function handleRequest(params) {
             service: serviceName,
             url: request.url,
             method: request.method,
-            status: result.status, // Response
+            status: result.status,
             duration: duration,
             correlationId: correlationId,
             caller: caller,
-            country: request.cf.country,
-            colo: request.cf.colo
-        }
+            country: request.cf?.country,
+            colo: request.cf?.colo
+        };
 
         logger({ request: data }, waitUntil);
     }
@@ -93,7 +93,7 @@ async function handleRequest(params) {
             duration: duration,
             scheduledTime: event.scheduledTime,
             result: result,
-        }
+        };
 
         logger({ scheduled: data }, waitUntil);
     }
@@ -108,7 +108,7 @@ function getCorrelationId(event) {
     if (event.type === 'fetch') {
         correlationId = event.request.headers.get('x-correlation-id');
         if (correlationId === null) {
-            correlationId = event.request.headers.get('cf-ray')
+            correlationId = event.request.headers.get('cf-ray');
         }
     }
     else  {
@@ -125,14 +125,14 @@ function getCaller(event) {
     if (event.type === 'fetch') {
         caller = event.request.headers.get('x-caller');
         if (caller === null) {
-            caller = 'internet'
+            caller = 'internet';
         }
     }
     else if (event.type === 'scheduled') {
-        caller = 'scheduler'
+        caller = 'scheduler';
     }
     else {
-        caller = 'unsupported'
+        caller = 'unsupported';
     }
 
     return caller;
