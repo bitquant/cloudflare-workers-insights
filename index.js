@@ -78,8 +78,20 @@ async function handleRequest(params) {
             duration: duration,
             correlationId: correlationId,
             caller: caller,
+            ip: request.headers?.get('Cf-Connecting-IP'),
+            colo: request.cf?.colo,
+            asn: request.cf?.asn,            
+            aso: request.cf?.asOrganization,
+            latitude: request.cf?.latitude,
+            longitude: request.cf?.longitude,
+            city: request.cf?.city,
+            region: request.cf?.region,
+            regionCode: request.cf?.regionCode,
+            postalCode: request.cf?.postalCode,
+            metroCode: request.cf?.metroCode,
+            timezone: request.cf?.timezone,
             country: request.cf?.country,
-            colo: request.cf?.colo
+            continent: request.cf?.continent,
         };
 
         logger({ request: data }, waitUntil);
