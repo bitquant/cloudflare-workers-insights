@@ -12,6 +12,8 @@ async function handleRequest(params) {
     let caller = getCaller(event);
     let context = { correlationId: correlationId, caller: caller };
     let waitUntil = (p) => event.waitUntil(p);
+    const fetchRequests = [];
+    const logs = [];
 
     context.log = (data) => {
         let logEntry = {
@@ -19,7 +21,7 @@ async function handleRequest(params) {
             correlationId: correlationId,
         };
         Object.assign(logEntry, data);
-        return logger({ log: logEntry }, waitUntil);
+        logs.push(logEntry);
     };
 
     context.fetch = async (request, options) => {
@@ -52,8 +54,9 @@ async function handleRequest(params) {
         }
 
         logEntry.duration = Date.now() - fetchStart;
+        logEntry.startTime = fetchStart;
 
-        logger({ fetch: logEntry }, waitUntil);
+        fetchRequests.push(logEntry);
 
         if (fetchError !== null) {
             throw fetchError;
@@ -94,7 +97,14 @@ async function handleRequest(params) {
             continent: request.cf?.continent,
         };
 
-        logger({ request: data }, waitUntil);
+        const loggerPayload = { 
+            message: `request ${event.request.url}`,
+            request: data, 
+            subrequests: fetchRequests, 
+            logs: logs
+        }
+
+        logger(loggerPayload, waitUntil);
     }
     else if (event.type === 'scheduled') {
 
@@ -107,7 +117,14 @@ async function handleRequest(params) {
             result: result,
         };
 
-        logger({ scheduled: data }, waitUntil);
+        const loggerPayload = { 
+            message: `scheduled ${serviceName}`,
+            scheduled: data,
+            subrequests: fetchRequests, 
+            logs: logs
+        }
+
+        logger(loggerPayload, waitUntil);
     }
 
     return result;
